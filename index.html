@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>東京JP助手 V3.0</title>
+    <title>東京JP助手 V3.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { background-color: #f8fbff; font-family: -apple-system, sans-serif; }
         .fuji-blue { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); }
         .nav-active { color: #1e40af; font-weight: bold; }
-        .page { display: none; animation: fadeIn 0.3s ease; }
+        .page { display: none; }
         .page.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .day-btn.active { background-color: #1e40af; color: white; border-color: #1e40af; }
         .hide-scroll::-webkit-scrollbar { display: none; }
         .checked-item { text-decoration: line-through; opacity: 0.5; }
     </style>
@@ -21,213 +21,240 @@
 
     <div class="fuji-blue text-white p-5 rounded-b-[30px] shadow-lg sticky top-0 z-50">
         <div class="flex justify-between items-center">
-            <h1 id="pageTitle" class="text-xl font-black italic">我的行程</h1>
+            <h1 id="pageTitle" class="text-xl font-black italic uppercase">Itinerary</h1>
             <div class="text-[10px] bg-white/20 px-3 py-1 rounded-full uppercase">Lai Jiun Yau</div>
         </div>
     </div>
 
     <div id="page-itinerary" class="page active p-4 space-y-4">
-        <div class="bg-white rounded-3xl shadow-sm overflow-hidden border border-blue-50">
+        <div class="bg-white rounded-3xl shadow-sm border border-blue-50">
             <div class="flex border-b border-gray-100">
-                <button onclick="toggleFlight('go')" id="goBtn" class="flex-1 py-3 text-xs font-bold transition-all bg-blue-50 text-blue-600">去程 4/8</button>
-                <button onclick="toggleFlight('back')" id="backBtn" class="flex-1 py-3 text-xs font-bold transition-all text-gray-400">回程 4/13</button>
+                <button onclick="toggleFlight('go')" id="goBtn" class="flex-1 py-3 text-xs font-bold bg-blue-50 text-blue-600">去程 4/8</button>
+                <button onclick="toggleFlight('back')" id="backBtn" class="flex-1 py-3 text-xs font-bold text-gray-400">回程 4/13</button>
             </div>
-            <div id="flightCard" class="p-5">
-                </div>
+            <div id="flightCard" class="p-5"></div>
+        </div>
+
+        <div class="flex space-x-2 overflow-x-auto py-2 hide-scroll">
+            <script>
+                const days = [
+                    {d: '4/8', n: 'D1'}, {d: '4/9', n: 'D2'}, {d: '4/10', n: 'D3'},
+                    {d: '4/11', n: 'D4'}, {d: '4/12', n: 'D5'}, {d: '4/13', n: 'D6'}
+                ];
+                days.forEach((day, i) => {
+                    document.write(`<button onclick="switchDay(${i+1})" id="day-btn-${i+1}" class="day-btn flex-shrink-0 w-14 h-14 rounded-2xl border-2 border-gray-100 bg-white text-center flex flex-col justify-center transition-all ${i===0?'active':''}">
+                        <span class="text-[9px] font-bold">${day.n}</span>
+                        <span class="text-[11px]">${day.d}</span>
+                    </button>`);
+                });
+            </script>
         </div>
 
         <div class="space-y-3">
-            <div class="flex justify-between items-center px-1">
-                <h2 class="text-gray-700 font-bold text-sm">行程規劃表</h2>
-                <button onclick="openTripModal()" class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-full">+ 新增行程</button>
+            <div class="flex justify-between items-center">
+                <h2 id="currentDayTitle" class="text-gray-700 font-bold text-sm">DAY 1 行程</h2>
+                <button onclick="openTripModal()" class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-full font-bold">+ 新增</button>
             </div>
-            <div id="tripList" class="space-y-3">
-                </div>
+            <div id="tripList" class="space-y-3"></div>
         </div>
     </div>
 
     <div id="page-tools" class="page p-4 space-y-6">
-        <section>
-            <h2 class="text-gray-700 font-bold mb-3 text-sm px-1"><i class="fa-solid fa-cloud-sun mr-2 text-blue-500"></i> 東京/富士天氣</h2>
-            <div id="weatherContainer" class="flex space-x-3 overflow-x-auto pb-2 hide-scroll"></div>
-        </section>
-
+        <section id="weatherArea"></section>
         <section class="bg-blue-900 text-white p-5 rounded-3xl shadow-lg">
-            <h2 class="text-xs font-bold mb-4 flex items-center"><i class="fa-solid fa-rotate mr-2 text-yellow-400"></i> 即時匯率換算</h2>
+            <h2 class="text-xs font-bold mb-4 flex items-center"><i class="fa-solid fa-rotate mr-2 text-yellow-400"></i> 即時匯率 (0.21)</h2>
             <div class="grid grid-cols-2 gap-4">
-                <div class="bg-blue-800/50 p-3 rounded-2xl text-center">
-                    <label class="text-[9px] text-blue-300 block mb-1">日幣 JPY</label>
-                    <input type="number" id="jpyVal" oninput="currConv('j')" class="bg-transparent border-none text-xl font-bold w-full outline-none text-center" placeholder="0">
-                </div>
-                <div class="bg-blue-800/50 p-3 rounded-2xl text-center">
-                    <label class="text-[9px] text-blue-300 block mb-1">台幣 TWD</label>
-                    <input type="number" id="twdVal" oninput="currConv('t')" class="bg-transparent border-none text-xl font-bold w-full outline-none text-center" placeholder="0">
-                </div>
+                <div class="bg-blue-800/50 p-3 rounded-2xl"><label class="text-[9px] text-blue-300 block">JPY</label><input type="number" id="jpyV" oninput="conv('j')" class="w-full bg-transparent border-none text-xl font-bold outline-none"></div>
+                <div class="bg-blue-800/50 p-3 rounded-2xl"><label class="text-[9px] text-blue-300 block">TWD</label><input type="number" id="twdV" oninput="conv('t')" class="w-full bg-transparent border-none text-xl font-bold outline-none"></div>
             </div>
         </section>
     </div>
 
-    <div id="page-prep" class="page p-4">
-        <div class="bg-white p-5 rounded-3xl shadow-sm space-y-4">
-            <h2 class="text-gray-700 font-bold flex items-center text-sm"><i class="fa-solid fa-check-double mr-2 text-blue-500"></i> 行前檢查清單</h2>
-            <div class="flex gap-2">
-                <input type="text" id="todoIn" placeholder="輸入準備項目..." class="flex-1 bg-gray-50 p-3 rounded-xl text-xs outline-none">
-                <button onclick="addTodo()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-bold">新增</button>
+    <div id="page-prep" class="page p-4 space-y-6">
+        <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-50">
+            <h2 class="text-gray-700 font-bold text-sm mb-3"><i class="fa-solid fa-clipboard-check mr-2 text-blue-500"></i> 行前檢查清單</h2>
+            <div class="flex gap-2 mb-4"><input type="text" id="prepIn" class="flex-1 bg-gray-50 p-2 rounded-xl text-xs outline-none" placeholder="新增準備項目..."><button onclick="addPrep()" class="bg-blue-600 text-white px-3 py-1 rounded-xl text-xs font-bold">新增</button></div>
+            <ul id="prepList" class="space-y-2 text-xs"></ul>
+        </div>
+        <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-50">
+            <div class="flex border-b border-gray-100 mb-4">
+                <button onclick="toggleWish('place')" id="wishPlaceBtn" class="flex-1 py-2 text-xs font-bold border-b-2 border-blue-500 text-blue-600">想去地點</button>
+                <button onclick="toggleWish('buy')" id="wishBuyBtn" class="flex-1 py-2 text-xs font-bold text-gray-300">想買清單</button>
             </div>
-            <ul id="todoList" class="space-y-2 text-xs text-gray-600"></ul>
+            <div class="flex gap-2 mb-4"><input type="text" id="wishIn" class="flex-1 bg-gray-50 p-2 rounded-xl text-xs outline-none" placeholder="輸入名稱..."><button onclick="addWish()" class="bg-blue-600 text-white px-3 py-1 rounded-xl text-xs font-bold">新增</button></div>
+            <ul id="wishList" class="space-y-2 text-xs"></ul>
         </div>
     </div>
 
-    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around p-3 shadow-2xl z-50">
-        <button onclick="switchPage('itinerary')" id="nav-itinerary" class="flex flex-col items-center nav-active">
-            <i class="fa-solid fa-map-location-dot text-lg"></i><span class="text-[10px] mt-1">行程</span>
-        </button>
-        <button onclick="switchPage('tools')" id="nav-tools" class="flex flex-col items-center text-gray-300">
-            <i class="fa-solid fa-bolt text-lg"></i><span class="text-[10px] mt-1">助手</span>
-        </button>
-        <button onclick="switchPage('prep')" id="nav-prep" class="flex flex-col items-center text-gray-300">
-            <i class="fa-solid fa-suitcase text-lg"></i><span class="text-[10px] mt-1">準備</span>
-        </button>
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around p-3 z-50">
+        <button onclick="switchPage('itinerary')" id="nav-itinerary" class="flex flex-col items-center nav-active"><i class="fa-solid fa-calendar-alt text-lg"></i><span class="text-[10px] mt-1">行程</span></button>
+        <button onclick="switchPage('tools')" id="nav-tools" class="flex flex-col items-center text-gray-300"><i class="fa-solid fa-cloud-sun text-lg"></i><span class="text-[10px] mt-1">工具</span></button>
+        <button onclick="switchPage('prep')" id="nav-prep" class="flex flex-col items-center text-gray-300"><i class="fa-solid fa-list-check text-lg"></i><span class="text-[10px] mt-1">清單</span></button>
     </nav>
 
     <div id="tripModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-6 z-[100]">
         <div class="bg-white rounded-3xl w-full p-6 space-y-4">
-            <h3 class="font-bold text-gray-800">新增詳細行程</h3>
+            <h3 class="font-bold text-gray-800">新增行程項目</h3>
             <input type="text" id="mName" placeholder="地點/店名" class="w-full bg-gray-100 p-3 rounded-xl outline-none text-sm">
-            <input type="text" id="mTime" placeholder="預定時間 (如 09:00)" class="w-full bg-gray-100 p-3 rounded-xl outline-none text-sm">
-            <input type="text" id="mRoute" placeholder="路徑/交通方式 (如 地鐵30min)" class="w-full bg-gray-100 p-3 rounded-xl outline-none text-sm">
+            <div class="flex items-center gap-2 bg-gray-100 p-3 rounded-xl">
+                <input type="number" id="mH" class="w-12 bg-transparent text-center outline-none font-bold" placeholder="時">
+                <span class="font-bold">:</span>
+                <input type="number" id="mM" class="w-12 bg-transparent text-center outline-none font-bold" placeholder="分">
+            </div>
+            <input type="text" id="mRoute" placeholder="交通方式" class="w-full bg-gray-100 p-3 rounded-xl outline-none text-sm">
             <div class="flex gap-2 pt-2">
-                <button onclick="closeTripModal()" class="flex-1 py-3 text-gray-400 font-bold">取消</button>
-                <button onclick="saveTrip()" class="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold">儲存項目</button>
+                <button onclick="closeTripModal()" class="flex-1 font-bold text-gray-400">取消</button>
+                <button onclick="saveTrip()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold">儲存</button>
             </div>
         </div>
     </div>
 
     <script>
-        // 分頁控制
-        function switchPage(pageId) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById('page-' + pageId).classList.add('active');
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('nav-active', 'text-gray-300'));
-            document.getElementById('nav-' + pageId).classList.add('nav-active');
-            const titles = {itinerary: '我的行程', tools: '工具助手', prep: '行前準備'};
-            document.getElementById('pageTitle').innerText = titles[pageId];
-        }
-
-        // 航班詳細資料
-        const flightInfo = {
-            go: { f: 'TPE', t: 'NRT', timeF: '13:10', timeT: '17:35', termF: '桃園 T1', termT: '成田 T3', code: 'GK 14', seat: '10B' },
-            back: { f: 'NRT', t: 'TPE', timeF: '22:40', timeT: '01:30', termF: '成田 T3', termT: '桃園 T1', code: 'GK 11', seat: '10F' }
+        let currentDay = 1;
+        let currentWishType = 'place';
+        const flightData = {
+            go: { f: 'TPE', t: 'NRT', timeF: '13:10', timeT: '17:35', termF: '桃園 T1', termT: '成田 T3', code: 'GK 14', dur: '3h 25m' },
+            back: { f: 'NRT', t: 'TPE', timeF: '22:40', timeT: '01:30', termF: '成田 T3', termT: '桃園 T1', code: 'GK 11', dur: '3h 50m' }
         };
 
-        function toggleFlight(type) {
-            const f = flightInfo[type];
-            document.getElementById('goBtn').className = `flex-1 py-3 text-xs font-bold ${type==='go'?'bg-blue-50 text-blue-600':'text-gray-400'}`;
-            document.getElementById('backBtn').className = `flex-1 py-3 text-xs font-bold ${type==='back'?'bg-blue-50 text-blue-600':'text-gray-400'}`;
+        function switchPage(p) {
+            document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+            document.getElementById('page-'+p).classList.add('active');
+            document.querySelectorAll('nav button').forEach(el => el.classList.remove('nav-active', 'text-gray-300'));
+            document.getElementById('nav-'+p).classList.add('nav-active');
+        }
+
+        function toggleFlight(t) {
+            const f = flightData[t];
+            document.getElementById('goBtn').className = `flex-1 py-3 text-xs font-bold ${t==='go'?'bg-blue-50 text-blue-600':'text-gray-400'}`;
+            document.getElementById('backBtn').className = `flex-1 py-3 text-xs font-bold ${t==='back'?'bg-blue-50 text-blue-600':'text-gray-400'}`;
             document.getElementById('flightCard').innerHTML = `
                 <div class="flex justify-between items-center text-center">
                     <div><p class="text-2xl font-black text-blue-900">${f.f}</p><p class="text-[9px] text-gray-400">${f.termF}</p><p class="text-[10px] font-bold mt-1">${f.timeF}</p></div>
-                    <div class="flex-1 px-4 relative flex flex-col items-center">
-                        <i class="fa-solid fa-plane text-blue-500 mb-1"></i>
-                        <div class="border-t-2 border-dashed border-blue-100 w-full mb-1"></div>
-                        <p class="text-[9px] text-blue-400 font-black">${f.code}</p>
+                    <div class="flex-1 px-4 flex flex-col items-center">
+                        <p class="text-[8px] text-gray-400 font-bold mb-1">${f.dur}</p>
+                        <div class="flex items-center w-full"><div class="border-t border-gray-200 flex-1"></div><i class="fa-solid fa-plane text-blue-500 mx-2 text-xs"></i><div class="border-t border-gray-200 flex-1"></div></div>
+                        <p class="text-[9px] text-blue-400 font-black mt-1 uppercase">${f.code}</p>
                     </div>
                     <div><p class="text-2xl font-black text-blue-900">${f.t}</p><p class="text-[9px] text-gray-400">${f.termT}</p><p class="text-[10px] font-bold mt-1">${f.timeT}</p></div>
-                </div>
-            `;
+                </div>`;
         }
 
-        // 行程管理
+        function switchDay(d) {
+            currentDay = d;
+            document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('day-btn-'+d).classList.add('active');
+            document.getElementById('currentDayTitle').innerText = `DAY ${d} 行程`;
+            renderTrips();
+        }
+
         function openTripModal() { document.getElementById('tripModal').style.display = 'flex'; }
         function closeTripModal() { document.getElementById('tripModal').style.display = 'none'; }
+        
         function saveTrip() {
             const name = document.getElementById('mName').value;
-            const time = document.getElementById('mTime').value;
+            const h = document.getElementById('mH').value || '00';
+            const m = document.getElementById('mM').value || '00';
             const route = document.getElementById('mRoute').value;
             if(!name) return;
-            const trips = JSON.parse(localStorage.getItem('tripV3') || '[]');
-            trips.push({name, time, route});
-            localStorage.setItem('tripV3', JSON.stringify(trips));
-            renderTrips();
-            closeTripModal();
+            const trips = JSON.parse(localStorage.getItem('tokyo_trips') || '{}');
+            if(!trips[currentDay]) trips[currentDay] = [];
+            trips[currentDay].push({name, time: `${h}:${m}`, route});
+            localStorage.setItem('tokyo_trips', JSON.stringify(trips));
+            renderTrips(); closeTripModal();
         }
+
         function renderTrips() {
-            const trips = JSON.parse(localStorage.getItem('tripV3') || '[]');
+            const trips = JSON.parse(localStorage.getItem('tokyo_trips') || '{}')[currentDay] || [];
             const list = document.getElementById('tripList');
-            list.innerHTML = trips.length ? '' : '<p class="text-center text-gray-300 text-xs py-10">開始規劃你的第一天行程吧！</p>';
-            trips.forEach((t, i) => {
-                const item = document.createElement('div');
-                item.className = "bg-white p-4 rounded-3xl shadow-sm border border-gray-50 flex items-center gap-4";
-                item.innerHTML = `
-                    <div class="text-blue-500 font-bold text-[10px] min-w-[40px]">${t.time || '--:--'}</div>
+            list.innerHTML = trips.map((t, i) => `
+                <div class="bg-white p-4 rounded-3xl shadow-sm border border-gray-50 flex items-center gap-4">
+                    <div class="text-blue-500 font-bold text-[11px] min-w-[35px]">${t.time}</div>
                     <div class="flex-1 border-l pl-4 border-gray-100">
                         <h4 class="font-bold text-sm text-gray-800">${t.name}</h4>
-                        <p class="text-[10px] text-gray-400 mt-1"><i class="fa-solid fa-train-subway mr-1 text-[8px]"></i> ${t.route || '無路線資訊'}</p>
+                        <p class="text-[10px] text-gray-400 mt-0.5">${t.route || '無路線資訊'}</p>
                     </div>
-                    <div class="flex gap-3">
-                        <a href="https://www.google.com/maps/search/${encodeURIComponent(t.name)}" target="_blank" class="text-blue-400"><i class="fa-solid fa-location-arrow"></i></a>
-                        <button onclick="delTrip(${i})" class="text-red-100"><i class="fa-solid fa-trash-can text-xs"></i></button>
-                    </div>`;
-                list.appendChild(item);
-            });
-        }
-        function delTrip(i) {
-            const trips = JSON.parse(localStorage.getItem('tripV3') || '[]');
-            trips.splice(i, 1);
-            localStorage.setItem('tripV3', JSON.stringify(trips));
-            renderTrips();
-        }
-
-        // 準備清單
-        function addTodo() {
-            const input = document.getElementById('todoIn');
-            if(!input.value) return;
-            const todos = JSON.parse(localStorage.getItem('todoV3') || '[]');
-            todos.push({text: input.value, done: false});
-            localStorage.setItem('todoV3', JSON.stringify(todos));
-            input.value = "";
-            renderTodos();
-        }
-        function renderTodos() {
-            const todos = JSON.parse(localStorage.getItem('todoV3') || '[]');
-            const list = document.getElementById('todoList');
-            list.innerHTML = todos.map((t, i) => `
-                <li class="flex items-center justify-between p-3 bg-gray-50 rounded-2xl ${t.done ? 'checked-item' : ''}">
-                    <span onclick="toggleTodo(${i})">${t.text}</span>
-                    <button onclick="delTodo(${i})" class="text-gray-300"><i class="fa-solid fa-xmark"></i></button>
-                </li>`).join('');
-        }
-        function toggleTodo(i) {
-            const todos = JSON.parse(localStorage.getItem('todoV3') || '[]');
-            todos[i].done = !todos[i].done;
-            localStorage.setItem('todoV3', JSON.stringify(todos));
-            renderTodos();
-        }
-        function delTodo(i) {
-            const todos = JSON.parse(localStorage.getItem('todoV3') || '[]');
-            todos.splice(i, 1);
-            localStorage.setItem('todoV3', JSON.stringify(todos));
-            renderTodos();
-        }
-
-        // 匯率與天氣
-        function currConv(type) {
-            const r = 0.211;
-            const j = document.getElementById('jpyVal'), t = document.getElementById('twdVal');
-            if(type==='j') t.value = Math.round(j.value * r);
-            else j.value = Math.round(t.value / r);
-        }
-        function loadWeather() {
-            const data = [{d:'4/8',i:'fa-sun',v:'高'}, {d:'4/9',i:'fa-cloud',v:'中'}, {d:'4/10',i:'fa-cloud-rain',v:'低'}, {d:'4/11',i:'fa-sun',v:'極高'}, {d:'4/12',i:'fa-sun',v:'高'}, {d:'4/13',i:'fa-cloud-sun',v:'中'}];
-            document.getElementById('weatherContainer').innerHTML = data.map(w => `
-                <div class="bg-white p-4 rounded-3xl shadow-sm min-w-[100px] text-center border border-gray-50">
-                    <p class="text-[10px] text-gray-400 font-bold mb-2">${w.d}</p>
-                    <i class="fa-solid ${w.i} text-blue-500 text-2xl my-2"></i>
-                    <div class="mt-2 text-[9px] text-blue-600 bg-blue-50 py-1 rounded-full">能見度: ${w.v}</div>
+                    <div class="flex gap-3 items-center">
+                        <a href="https://www.google.com/maps/search/${encodeURIComponent(t.name)}" target="_blank" class="text-blue-400 text-sm"><i class="fa-solid fa-location-arrow"></i></a>
+                        <button onclick="delTrip(${i})" class="text-red-100"><i class="fa-solid fa-trash-can text-[10px]"></i></button>
+                    </div>
                 </div>`).join('');
         }
 
-        window.onload = () => { toggleFlight('go'); renderTrips(); renderTodos(); loadWeather(); };
+        function delTrip(i) {
+            const trips = JSON.parse(localStorage.getItem('tokyo_trips') || '{}');
+            trips[currentDay].splice(i, 1);
+            localStorage.setItem('tokyo_trips', JSON.stringify(trips));
+            renderTrips();
+        }
+
+        // 想去 & 想買
+        function toggleWish(t) {
+            currentWishType = t;
+            document.getElementById('wishPlaceBtn').className = `flex-1 py-2 text-xs font-bold ${t==='place'?'border-b-2 border-blue-500 text-blue-600':'text-gray-300'}`;
+            document.getElementById('wishBuyBtn').className = `flex-1 py-2 text-xs font-bold ${t==='buy'?'border-b-2 border-blue-500 text-blue-600':'text-gray-300'}`;
+            renderWishes();
+        }
+        function addWish() {
+            const val = document.getElementById('wishIn').value; if(!val) return;
+            const wish = JSON.parse(localStorage.getItem('tokyo_wish') || '{"place":[], "buy":[]}');
+            wish[currentWishType].push(val);
+            localStorage.setItem('tokyo_wish', JSON.stringify(wish));
+            document.getElementById('wishIn').value = ""; renderWishes();
+        }
+        function renderWishes() {
+            const wish = JSON.parse(localStorage.getItem('tokyo_wish') || '{"place":[], "buy":[]}')[currentWishType];
+            document.getElementById('wishList').innerHTML = wish.map((w, i) => `
+                <li class="flex items-center justify-between p-3 bg-gray-50 rounded-2xl">
+                    <span>${w}</span>
+                    <div class="flex gap-3">
+                        ${currentWishType==='place' ? `<a href="https://www.google.com/maps/search/${encodeURIComponent(w)}" target="_blank" class="text-blue-300"><i class="fa-solid fa-map-pin"></i></a>` : ''}
+                        <button onclick="delWish(${i})" class="text-gray-200"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                </li>`).join('');
+        }
+        function delWish(i) {
+            const wish = JSON.parse(localStorage.getItem('tokyo_wish'));
+            wish[currentWishType].splice(i, 1);
+            localStorage.setItem('tokyo_wish', JSON.stringify(wish));
+            renderWishes();
+        }
+
+        // Prep 邏輯
+        function addPrep() {
+            const val = document.getElementById('prepIn').value; if(!val) return;
+            const preps = JSON.parse(localStorage.getItem('tokyo_prep') || '[]');
+            preps.push({t: val, d: false});
+            localStorage.setItem('tokyo_prep', JSON.stringify(preps));
+            document.getElementById('prepIn').value = ""; renderPreps();
+        }
+        function renderPreps() {
+            const preps = JSON.parse(localStorage.getItem('tokyo_prep') || '[]');
+            document.getElementById('prepList').innerHTML = preps.map((p, i) => `
+                <li class="flex items-center justify-between p-3 bg-gray-50 rounded-2xl ${p.d?'checked-item':''}">
+                    <span onclick="togglePrep(${i})">${p.t}</span>
+                    <button onclick="delPrep(${i})" class="text-gray-200"><i class="fa-solid fa-xmark"></i></button>
+                </li>`).join('');
+        }
+        function togglePrep(i) {
+            const p = JSON.parse(localStorage.getItem('tokyo_prep')); p[i].d = !p[i].d;
+            localStorage.setItem('tokyo_prep', JSON.stringify(p)); renderPreps();
+        }
+        function delPrep(i) {
+            const p = JSON.parse(localStorage.getItem('tokyo_prep')); p.splice(i, 1);
+            localStorage.setItem('tokyo_prep', JSON.stringify(p)); renderPreps();
+        }
+
+        // 工具 (天氣/匯率)
+        function conv(t) {
+            const r = 0.211; const j = document.getElementById('jpyV'), tw = document.getElementById('twdV');
+            if(t==='j') tw.value = Math.round(j.value * r); else j.value = Math.round(tw.value / r);
+        }
+
+        window.onload = () => {
+            toggleFlight('go'); renderTrips(); renderWishes(); renderPreps();
+            document.getElementById('weatherArea').innerHTML = `<h2 class="text-gray-700 font-bold mb-3 text-sm px-1">天氣預報</h2><div class="flex space-x-3 overflow-x-auto pb-2 hide-scroll">${[{d:'4/8',i:'fa-sun'},{d:'4/9',i:'fa-cloud'},{d:'4/10',i:'fa-cloud-rain'},{d:'4/11',i:'fa-sun'},{d:'4/12',i:'fa-sun'},{d:'4/13',i:'fa-cloud-sun'}].map(w=>`<div class="bg-white p-4 rounded-3xl min-w-[90px] text-center border border-gray-50"><p class="text-[10px] text-gray-400 font-bold">${w.d}</p><i class="fa-solid ${w.i} text-blue-500 text-xl my-2"></i></div>`).join('')}</div>`;
+        };
     </script>
 </body>
 </html>
