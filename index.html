@@ -3,33 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>東京JP助手 V3.3 - 專業導遊版</title>
+    <title>東京JP助手 V3.5 - 同步分享版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background-color: #f8fbff; font-family: -apple-system, sans-serif; }
+        body { background-color: #f8fbff; font-family: -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
         .fuji-blue { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); }
         .nav-active { color: #1e40af; font-weight: bold; }
         .page { display: none; }
         .page.active { display: block; }
         .day-btn.active { background-color: #1e40af; color: white; border-color: #1e40af; transform: scale(1.05); }
         .hide-scroll::-webkit-scrollbar { display: none; }
-        .checked-item { text-decoration: line-through; opacity: 0.5; }
-        /* 間隔時間標籤樣式 */
-        .interval-tag { position: relative; left: 15px; border-left: 2px dashed #d1d5db; margin: -5px 0; padding: 10px 0 10px 25px; font-size: 10px; color: #9ca3af; font-weight: bold; }
+        .interval-tag { position: relative; left: 15px; border-left: 2px dashed #d1d5db; margin: -2px 0; padding: 10px 0 10px 25px; font-size: 10px; color: #9ca3af; }
     </style>
 </head>
 <body class="pb-24">
 
     <div class="fuji-blue text-white p-5 rounded-b-[30px] shadow-lg sticky top-0 z-50">
         <div class="flex justify-between items-center">
-            <h1 id="pageTitle" class="text-xl font-black italic uppercase">Itinerary</h1>
-            <div class="text-[10px] bg-white/20 px-3 py-1 rounded-full uppercase tracking-widest">Lai Jiun Yau</div>
+            <h1 id="pageTitle" class="text-xl font-black italic uppercase">Tokyo Trip</h1>
+            <div class="flex gap-2">
+                <button onclick="exportData()" class="text-[10px] bg-white/20 px-3 py-1 rounded-full">導出</button>
+                <button onclick="importData()" class="text-[10px] bg-white/20 px-3 py-1 rounded-full">匯入</button>
+            </div>
         </div>
     </div>
 
     <div id="page-itinerary" class="page active p-4 space-y-4">
-        <div class="bg-white rounded-3xl shadow-sm border border-blue-50 overflow-hidden">
+        <div id="flightArea" class="bg-white rounded-3xl shadow-sm border border-blue-50 overflow-hidden">
             <div class="flex border-b border-gray-100">
                 <button onclick="toggleFlight('go')" id="goBtn" class="flex-1 py-3 text-xs font-bold bg-blue-50 text-blue-600">去程 4/8</button>
                 <button onclick="toggleFlight('back')" id="backBtn" class="flex-1 py-3 text-xs font-bold text-gray-400">回程 4/13</button>
@@ -37,21 +38,12 @@
             <div id="flightCard" class="p-5"></div>
         </div>
 
-        <div class="flex space-x-2 overflow-x-auto py-2 hide-scroll">
-            <script>
-                const days = [{d:'4/8',n:'D1'},{d:'4/9',n:'D2'},{d:'4/10',n:'D3'},{d:'4/11',n:'D4'},{d:'4/12',n:'D5'},{d:'4/13',n:'D6'}];
-                days.forEach((day, i) => {
-                    document.write(`<button onclick="switchDay(${i+1})" id="day-btn-${i+1}" class="day-btn flex-shrink-0 w-14 h-14 rounded-2xl border-2 border-gray-100 bg-white text-center flex flex-col justify-center transition-all ${i===0?'active':''}">
-                        <span class="text-[9px] font-bold">${day.n}</span><span class="text-[11px]">${day.d}</span>
-                    </button>`);
-                });
-            </script>
-        </div>
+        <div class="flex space-x-2 overflow-x-auto py-2 hide-scroll" id="dayBar"></div>
 
         <div class="space-y-1">
             <div class="flex justify-between items-center mb-2 px-1">
                 <h2 id="currentDayTitle" class="text-gray-700 font-bold text-sm">DAY 1 行程</h2>
-                <button onclick="openTripModal()" class="text-xs bg-blue-600 text-white px-4 py-2 rounded-full font-bold shadow-md">+ 新增行程</button>
+                <button onclick="openTripModal()" class="text-xs bg-blue-600 text-white px-4 py-2 rounded-full font-bold">+ 新增行程</button>
             </div>
             <div id="tripList" class="space-y-0 pb-4"></div>
         </div>
@@ -60,50 +52,44 @@
     <div id="page-tools" class="page p-4 space-y-6">
         <section id="weatherArea"></section>
         <section class="bg-blue-900 text-white p-6 rounded-[2rem] shadow-xl">
-            <h2 class="text-xs font-bold mb-5 flex items-center tracking-widest"><i class="fa-solid fa-coins mr-2 text-yellow-400"></i> 匯率計算 (0.211)</h2>
-            <div class="space-y-4">
-                <div class="bg-white/10 p-4 rounded-2xl flex justify-between items-center">
-                    <span class="text-xs text-blue-200">日幣 JPY</span>
-                    <input type="number" id="jpyV" oninput="conv('j')" class="bg-transparent text-right text-xl font-bold outline-none w-1/2" placeholder="0">
-                </div>
-                <div class="bg-white/10 p-4 rounded-2xl flex justify-between items-center">
-                    <span class="text-xs text-blue-200">台幣 TWD</span>
-                    <input type="number" id="twdV" oninput="conv('t')" class="bg-transparent text-right text-xl font-bold outline-none w-1/2" placeholder="0">
-                </div>
+            <h2 class="text-xs font-bold mb-5 flex items-center tracking-widest"><i class="fa-solid fa-coins mr-2 text-yellow-400"></i> 匯率計算</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <input type="number" id="jpyV" oninput="conv('j')" class="bg-white/10 p-4 rounded-2xl text-xl font-bold outline-none" placeholder="JPY">
+                <input type="number" id="twdV" oninput="conv('t')" class="bg-white/10 p-4 rounded-2xl text-xl font-bold outline-none" placeholder="TWD">
             </div>
         </section>
     </div>
 
-    <div id="page-prep" class="page p-4 space-y-6">
-        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-50">
-            <h2 class="text-gray-700 font-bold text-sm mb-4 tracking-tight">行前準備 / 清單</h2>
+    <div id="page-prep" class="page p-4">
+        <div class="bg-white p-6 rounded-[2rem] shadow-sm">
             <div class="flex bg-gray-50 rounded-xl p-1 mb-4">
-                <button onclick="toggleWish('place')" id="wishPlaceBtn" class="flex-1 py-2 text-[11px] font-bold rounded-lg bg-white shadow-sm text-blue-600">想去地點</button>
-                <button onclick="toggleWish('buy')" id="wishBuyBtn" class="flex-1 py-2 text-[11px] font-bold text-gray-400">想買清單</button>
-                <button onclick="toggleWish('prep')" id="wishPrepBtn" class="flex-1 py-2 text-[11px] font-bold text-gray-400">行前清單</button>
+                <button onclick="toggleWish('place')" id="wishPlaceBtn" class="flex-1 py-2 text-[11px] font-bold rounded-lg bg-white shadow-sm text-blue-600">想去</button>
+                <button onclick="toggleWish('buy')" id="wishBuyBtn" class="flex-1 py-2 text-[11px] font-bold text-gray-400">想買</button>
+                <button onclick="toggleWish('prep')" id="wishPrepBtn" class="flex-1 py-2 text-[11px] font-bold text-gray-400">清單</button>
             </div>
-            <div class="flex gap-2 mb-4"><input type="text" id="wishIn" class="flex-1 bg-gray-50 p-3 rounded-xl text-xs outline-none" placeholder="輸入名稱..."><button onclick="addWish()" class="bg-blue-600 text-white px-4 rounded-xl text-xs font-bold">加</button></div>
+            <div class="flex gap-2 mb-4"><input type="text" id="wishIn" class="flex-1 bg-gray-50 p-3 rounded-xl text-xs outline-none" placeholder="新增項目..."><button onclick="addWish()" class="bg-blue-600 text-white px-4 rounded-xl text-xs font-bold">加</button></div>
             <ul id="wishList" class="space-y-3"></ul>
         </div>
     </div>
 
-    <nav class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-gray-100 flex justify-around p-4 z-50">
+    <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-100 flex justify-around p-4 z-50">
         <button onclick="switchPage('itinerary')" id="nav-itinerary" class="flex flex-col items-center nav-active"><i class="fa-solid fa-route text-lg"></i><span class="text-[9px] mt-1">行程</span></button>
         <button onclick="switchPage('tools')" id="nav-tools" class="flex flex-col items-center text-gray-300"><i class="fa-solid fa-wand-magic-sparkles text-lg"></i><span class="text-[9px] mt-1">工具</span></button>
         <button onclick="switchPage('prep')" id="nav-prep" class="flex flex-col items-center text-gray-300"><i class="fa-solid fa-heart text-lg"></i><span class="text-[9px] mt-1">願望</span></button>
     </nav>
 
     <div id="tripModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center p-8 z-[100] backdrop-blur-sm">
-        <div class="bg-white rounded-[2.5rem] w-full p-8 space-y-5 shadow-2xl">
-            <h3 id="modalTitle" class="font-black text-gray-800 text-lg">新增行程</h3>
+        <div class="bg-white rounded-[2.5rem] w-full p-8 space-y-4 shadow-2xl">
+            <h3 id="modalTitle" class="font-black text-gray-800">新增行程</h3>
             <input type="hidden" id="editIndex">
-            <div class="space-y-1"><label class="text-[10px] text-gray-400 ml-2 font-bold uppercase tracking-widest">Location 地點</label><input type="text" id="mName" class="w-full bg-gray-50 p-4 rounded-2xl outline-none text-sm font-bold border-none focus:ring-2 ring-blue-500 transition-all"></div>
+            <input type="text" id="mName" placeholder="地點/店名" class="w-full bg-gray-50 p-4 rounded-2xl outline-none text-sm font-bold">
             <div class="flex gap-4">
-                <div class="flex-1 space-y-1"><label class="text-[10px] text-gray-400 ml-2 font-bold uppercase">Hour</label><input type="number" id="mH" class="w-full bg-gray-50 p-4 rounded-2xl text-center font-bold outline-none" placeholder="12"></div>
-                <div class="flex-1 space-y-1"><label class="text-[10px] text-gray-400 ml-2 font-bold uppercase">Min</label><input type="number" id="mM" class="w-full bg-gray-50 p-4 rounded-2xl text-center font-bold outline-none" placeholder="00"></div>
+                <input type="number" id="mH" class="flex-1 bg-gray-50 p-4 rounded-2xl text-center font-bold" placeholder="時">
+                <input type="number" id="mM" class="flex-1 bg-gray-50 p-4 rounded-2xl text-center font-bold" placeholder="分">
             </div>
-            <div class="space-y-1"><label class="text-[10px] text-gray-400 ml-2 font-bold uppercase tracking-widest">Note 備註</label><input type="text" id="mNote" class="w-full bg-gray-50 p-4 rounded-2xl outline-none text-sm" placeholder="例如: 門票預約、必吃美食..."></div>
-            <div class="flex gap-3 pt-4"><button onclick="closeTripModal()" class="flex-1 font-bold text-gray-400">取消</button><button onclick="saveTrip()" id="modalSaveBtn" class="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-200">儲存行程</button></div>
+            <input type="text" id="mMap" placeholder="貼上 Google 地圖網址 (選填)" class="w-full bg-gray-50 p-4 rounded-2xl outline-none text-[10px]">
+            <input type="text" id="mNote" placeholder="備註 (如交通或必吃)" class="w-full bg-gray-50 p-4 rounded-2xl outline-none text-sm">
+            <div class="flex gap-3 pt-2"><button onclick="closeTripModal()" class="flex-1 font-bold text-gray-400">取消</button><button onclick="saveTrip()" class="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-bold">儲存</button></div>
         </div>
     </div>
 
@@ -115,7 +101,29 @@
             back: { f: 'NRT', t: 'TPE', timeF: '22:40', timeT: '01:30', termF: '成田 T3', termT: '桃園 T1', code: 'GK 11', dur: '3h 50m' }
         };
 
-        // 基本切換邏輯
+        // 資料同步功能
+        function exportData() {
+            const allData = {
+                trips: localStorage.getItem('tokyo_v35_trips'),
+                wishes: localStorage.getItem('tokyo_v35_wish')
+            };
+            const code = btoa(unescape(encodeURIComponent(JSON.stringify(allData))));
+            prompt("請複製以下同步代碼傳給隊友：", code);
+        }
+
+        function importData() {
+            const code = prompt("請貼上隊友分享的同步代碼：");
+            if (!code) return;
+            try {
+                const decoded = JSON.parse(decodeURIComponent(escape(atob(code))));
+                localStorage.setItem('tokyo_v35_trips', decoded.trips);
+                localStorage.setItem('tokyo_v35_wish', decoded.wishes);
+                alert("匯入成功！網頁即將刷新");
+                location.reload();
+            } catch (e) { alert("代碼格式錯誤！"); }
+        }
+
+        // 基本切換與天氣/匯率 (同 V3.3)
         function switchPage(p) {
             document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
             document.getElementById('page-'+p).classList.add('active');
@@ -127,16 +135,15 @@
             const f = flightData[t];
             document.getElementById('goBtn').className = `flex-1 py-3 text-xs font-bold ${t==='go'?'bg-blue-50 text-blue-600':'text-gray-400'}`;
             document.getElementById('backBtn').className = `flex-1 py-3 text-xs font-bold ${t==='back'?'bg-blue-50 text-blue-600':'text-gray-400'}`;
-            document.getElementById('flightCard').innerHTML = `
-                <div class="flex justify-between items-center text-center">
-                    <div><p class="text-2xl font-black text-blue-900">${f.f}</p><p class="text-[9px] text-gray-400">${f.termF}</p><p class="text-[11px] font-bold mt-1 text-blue-600">${f.timeF}</p></div>
-                    <div class="flex-1 px-4 flex flex-col items-center">
-                        <p class="text-[8px] text-gray-300 font-bold mb-1 italic">${f.dur}</p>
-                        <div class="flex items-center w-full"><div class="border-t border-gray-100 flex-1"></div><i class="fa-solid fa-plane text-blue-500 mx-2 text-xs"></i><div class="border-t border-gray-100 flex-1"></div></div>
-                        <p class="text-[9px] text-blue-400 font-black mt-1 uppercase">${f.code}</p>
-                    </div>
-                    <div><p class="text-2xl font-black text-blue-900">${f.t}</p><p class="text-[9px] text-gray-400">${f.termT}</p><p class="text-[11px] font-bold mt-1 text-blue-600">${f.timeT}</p></div>
-                </div>`;
+            document.getElementById('flightCard').innerHTML = `<div class="flex justify-between items-center text-center"><div><p class="text-2xl font-black text-blue-900">${f.f}</p><p class="text-[11px] font-bold mt-1 text-blue-600">${f.timeF}</p></div><div class="flex-1 px-4 flex flex-col items-center"><p class="text-[8px] text-gray-300 font-bold mb-1 italic">${f.dur}</p><div class="flex items-center w-full"><div class="border-t border-gray-100 flex-1"></div><i class="fa-solid fa-plane text-blue-500 mx-2 text-xs"></i><div class="border-t border-gray-100 flex-1"></div></div><p class="text-[9px] text-blue-400 font-black mt-1 uppercase">${f.code}</p></div><div><p class="text-2xl font-black text-blue-900">${f.t}</p><p class="text-[11px] font-bold mt-1 text-blue-600">${f.timeT}</p></div></div>`;
+        }
+
+        function renderDayBar() {
+            const days = [{d:'4/8',n:'D1'},{d:'4/9',n:'D2'},{d:'4/10',n:'D3'},{d:'4/11',n:'D4'},{d:'4/12',n:'D5'},{d:'4/13',n:'D6'}];
+            document.getElementById('dayBar').innerHTML = days.map((day, i) => `
+                <button onclick="switchDay(${i+1})" id="day-btn-${i+1}" class="day-btn flex-shrink-0 w-14 h-14 rounded-2xl border-2 border-gray-100 bg-white text-center flex flex-col justify-center transition-all ${i===0?'active':''}">
+                    <span class="text-[9px] font-bold">${day.n}</span><span class="text-[11px]">${day.d}</span>
+                </button>`).join('');
         }
 
         function switchDay(d) {
@@ -147,169 +154,136 @@
             renderTrips();
         }
 
-        // 行程計算與顯示
-        function calculateDiff(t1, t2) {
-            const d1 = new Date(`2000/01/01 ${t1}`);
-            const d2 = new Date(`2000/01/01 ${t2}`);
-            const diffMs = d2 - d1;
-            if (diffMs <= 0) return null;
-            const h = Math.floor(diffMs / 3600000);
-            const m = Math.floor((diffMs % 3600000) / 60000);
-            return h > 0 ? `${h} 小時 ${m} 分` : `${m} 分鐘`;
-        }
-
-        // 開啟 Modal (區分新增與編輯)
+        // 行程核心功能 (修改/地圖/計算)
         function openTripModal(index = null) {
-            const modal = document.getElementById('tripModal');
-            const title = document.getElementById('modalTitle');
             const editIdx = document.getElementById('editIndex');
-            
             if (index !== null) {
-                const trips = JSON.parse(localStorage.getItem('tokyo_trips_v3.3') || '{}')[currentDay];
+                const trips = JSON.parse(localStorage.getItem('tokyo_v35_trips') || '{}')[currentDay];
                 const t = trips[index];
-                title.innerText = "修改行程項目";
+                document.getElementById('modalTitle').innerText = "修改行程";
                 document.getElementById('mName').value = t.name;
                 document.getElementById('mH').value = t.time.split(':')[0];
                 document.getElementById('mM').value = t.time.split(':')[1];
+                document.getElementById('mMap').value = t.map || '';
                 document.getElementById('mNote').value = t.note || '';
                 editIdx.value = index;
             } else {
-                title.innerText = "新增行程項目";
+                document.getElementById('modalTitle').innerText = "新增行程";
                 document.getElementById('mName').value = '';
                 document.getElementById('mH').value = '';
                 document.getElementById('mM').value = '';
+                document.getElementById('mMap').value = '';
                 document.getElementById('mNote').value = '';
                 editIdx.value = "";
             }
-            modal.style.display = 'flex';
+            document.getElementById('tripModal').style.display = 'flex';
         }
-
-        function closeTripModal() { document.getElementById('tripModal').style.display = 'none'; }
 
         function saveTrip() {
             const name = document.getElementById('mName').value;
             const h = document.getElementById('mH').value.padStart(2, '0');
             const m = document.getElementById('mM').value.padStart(2, '0');
+            const mapLink = document.getElementById('mMap').value;
             const note = document.getElementById('mNote').value;
             const editIdx = document.getElementById('editIndex').value;
-            
             if(!name) return;
-            let tripsAll = JSON.parse(localStorage.getItem('tokyo_trips_v3.3') || '{}');
+            let tripsAll = JSON.parse(localStorage.getItem('tokyo_v35_trips') || '{}');
             if(!tripsAll[currentDay]) tripsAll[currentDay] = [];
-            
-            const tripData = {name, time: `${h}:${m}`, note};
-            
-            if (editIdx !== "") {
-                tripsAll[currentDay][parseInt(editIdx)] = tripData;
-            } else {
-                tripsAll[currentDay].push(tripData);
-            }
-            
-            // 排序
+            const data = {name, time: `${h}:${m}`, map: mapLink, note};
+            if (editIdx !== "") tripsAll[currentDay][parseInt(editIdx)] = data;
+            else tripsAll[currentDay].push(data);
             tripsAll[currentDay].sort((a,b) => a.time.localeCompare(b.time));
-            localStorage.setItem('tokyo_trips_v3.3', JSON.stringify(tripsAll));
+            localStorage.setItem('tokyo_v35_trips', JSON.stringify(tripsAll));
             renderTrips(); closeTripModal();
         }
 
         function renderTrips() {
-            const trips = JSON.parse(localStorage.getItem('tokyo_trips_v3.3') || '{}')[currentDay] || [];
+            const trips = JSON.parse(localStorage.getItem('tokyo_v35_trips') || '{}')[currentDay] || [];
             const list = document.getElementById('tripList');
             let html = '';
-            
             trips.forEach((t, i) => {
-                // 顯示行程卡片
+                const mapHref = t.map && t.map.startsWith('http') ? t.map : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t.name)}`;
                 html += `
-                    <div class="relative group">
-                        <div onclick="openTripModal(${i})" class="bg-white p-5 rounded-[1.8rem] shadow-sm border border-gray-50 flex items-center gap-5 active:scale-95 transition-all">
-                            <div class="text-blue-600 font-black text-[13px] min-w-[40px]">${t.time}</div>
-                            <div class="flex-1 border-l pl-5 border-gray-100">
-                                <h4 class="font-black text-[15px] text-gray-800">${t.name}</h4>
-                                <p class="text-xs text-blue-400 mt-1 font-medium">${t.note || '無備註'}</p>
-                            </div>
-                            <div class="flex gap-2 items-center">
-                                <a href="https://www.google.com/maps/search/${encodeURIComponent(t.name)}" target="_blank" onclick="event.stopPropagation();" class="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 text-xs"><i class="fa-solid fa-location-arrow"></i></a>
-                                <button onclick="event.stopPropagation(); delTrip(${i})" class="w-8 h-8 flex items-center justify-center text-red-100 hover:text-red-400"><i class="fa-solid fa-trash-can text-[10px]"></i></button>
-                            </div>
+                    <div class="bg-white p-5 rounded-[1.8rem] shadow-sm border border-gray-50 flex items-center gap-5 mb-1" onclick="openTripModal(${i})">
+                        <div class="text-blue-600 font-black text-[13px] min-w-[40px]">${t.time}</div>
+                        <div class="flex-1 border-l pl-5 border-gray-100">
+                            <h4 class="font-black text-sm text-gray-800">${t.name}</h4>
+                            <p class="text-[10px] text-blue-400 mt-1">${t.note || '無備註'}</p>
                         </div>
-                    </div>
-                `;
-                
-                // 計算並顯示與下一個行程的間隔
+                        <div class="flex gap-2 items-center">
+                            <a href="${mapHref}" target="_blank" onclick="event.stopPropagation();" class="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 text-xs"><i class="fa-solid fa-location-arrow"></i></a>
+                            <button onclick="event.stopPropagation(); delTrip(${i})" class="w-8 h-8 text-red-100"><i class="fa-solid fa-trash-can text-[10px]"></i></button>
+                        </div>
+                    </div>`;
                 if (i < trips.length - 1) {
                     const diff = calculateDiff(t.time, trips[i+1].time);
-                    if (diff) {
-                        html += `<div class="interval-tag">⏱ 間隔 ${diff}</div>`;
-                    }
+                    if (diff) html += `<div class="interval-tag">⏱ 間隔 ${diff}</div>`;
                 }
             });
-            
-            list.innerHTML = html || `<div class="text-center py-16"><p class="text-[10px] text-gray-300 font-bold uppercase tracking-[0.2em]">No plans for day ${currentDay}</p></div>`;
+            list.innerHTML = html || `<div class="text-center py-20 text-gray-300 text-[10px] font-bold">目前無行程</div>`;
+        }
+
+        function calculateDiff(t1, t2) {
+            const d1 = new Date(`2000/01/01 ${t1}`), d2 = new Date(`2000/01/01 ${t2}`);
+            const diffMs = d2 - d1; if (diffMs <= 0) return null;
+            const h = Math.floor(diffMs / 3600000), m = Math.floor((diffMs % 3600000) / 60000);
+            return h > 0 ? `${h}h ${m}m` : `${m}m`;
         }
 
         function delTrip(i) {
-            if(!confirm('確定刪除此行程？')) return;
-            let tripsAll = JSON.parse(localStorage.getItem('tokyo_trips_v3.3'));
+            if(!confirm('確定刪除？')) return;
+            let tripsAll = JSON.parse(localStorage.getItem('tokyo_v35_trips'));
             tripsAll[currentDay].splice(i, 1);
-            localStorage.setItem('tokyo_trips_v3.3', JSON.stringify(tripsAll));
+            localStorage.setItem('tokyo_v35_trips', JSON.stringify(tripsAll));
             renderTrips();
         }
 
-        // 願望與準備清單 (三合一)
+        function closeTripModal() { document.getElementById('tripModal').style.display = 'none'; }
+        
+        // 願望與準備 (V3.3 邏輯)
         function toggleWish(t) {
             currentWishType = t;
-            const btns = {place: 'wishPlaceBtn', buy: 'wishBuyBtn', prep: 'wishPrepBtn'};
-            Object.values(btns).forEach(id => {
-                document.getElementById(id).className = `flex-1 py-2 text-[11px] font-bold rounded-lg ${id===btns[t]?'bg-white shadow-sm text-blue-600':'text-gray-400'}`;
+            ['wishPlaceBtn','wishBuyBtn','wishPrepBtn'].forEach(id => {
+                const btn = document.getElementById(id);
+                const isActive = id.toLowerCase().includes(t);
+                btn.className = `flex-1 py-2 text-[11px] font-bold rounded-lg ${isActive?'bg-white shadow-sm text-blue-600':'text-gray-400'}`;
             });
             renderWishes();
         }
         function addWish() {
             const val = document.getElementById('wishIn').value; if(!val) return;
-            let data = JSON.parse(localStorage.getItem('tokyo_wish_v3.3') || '{"place":[], "buy":[], "prep":[]}');
+            let data = JSON.parse(localStorage.getItem('tokyo_v35_wish') || '{"place":[], "buy":[], "prep":[]}');
             data[currentWishType].push({t: val, d: false});
-            localStorage.setItem('tokyo_wish_v3.3', JSON.stringify(data));
+            localStorage.setItem('tokyo_v35_wish', JSON.stringify(data));
             document.getElementById('wishIn').value = ""; renderWishes();
         }
         function renderWishes() {
-            const data = JSON.parse(localStorage.getItem('tokyo_wish_v3.3') || '{"place":[], "buy":[], "prep":[]}')[currentWishType];
+            const data = JSON.parse(localStorage.getItem('tokyo_v35_wish') || '{"place":[], "buy":[], "prep":[]}')[currentWishType];
             document.getElementById('wishList').innerHTML = data.map((w, i) => `
                 <li class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl ${w.d?'checked-item':''}">
                     <span onclick="toggleItem(${i})" class="text-xs font-bold text-gray-700">${w.t}</span>
-                    <div class="flex gap-4">
-                        ${currentWishType==='place' ? `<a href="https://www.google.com/maps/search/${encodeURIComponent(w.t)}" target="_blank" class="text-blue-300"><i class="fa-solid fa-map-pin"></i></a>` : ''}
-                        <button onclick="delItem(${i})" class="text-gray-200"><i class="fa-solid fa-xmark"></i></button>
-                    </div>
+                    <button onclick="delItem(${i})" class="text-gray-200"><i class="fa-solid fa-xmark"></i></button>
                 </li>`).join('');
         }
         function toggleItem(i) {
-            let data = JSON.parse(localStorage.getItem('tokyo_wish_v3.3'));
+            let data = JSON.parse(localStorage.getItem('tokyo_v35_wish'));
             data[currentWishType][i].d = !data[currentWishType][i].d;
-            localStorage.setItem('tokyo_wish_v3.3', JSON.stringify(data)); renderWishes();
+            localStorage.setItem('tokyo_v35_wish', JSON.stringify(data)); renderWishes();
         }
         function delItem(i) {
-            let data = JSON.parse(localStorage.getItem('tokyo_wish_v3.3'));
+            let data = JSON.parse(localStorage.getItem('tokyo_v35_wish'));
             data[currentWishType].splice(i, 1);
-            localStorage.setItem('tokyo_wish_v3.3', JSON.stringify(data)); renderWishes();
+            localStorage.setItem('tokyo_v35_wish', JSON.stringify(data)); renderWishes();
         }
 
-        // 工具
         function conv(t) {
             const r = 0.211; const j = document.getElementById('jpyV'), tw = document.getElementById('twdV');
             if(t==='j') tw.value = Math.round(j.value * r); else j.value = Math.round(tw.value / r);
         }
 
         window.onload = () => {
-            toggleFlight('go'); renderTrips(); renderWishes();
-            document.getElementById('weatherArea').innerHTML = `
-                <h2 class="text-gray-700 font-bold mb-4 text-sm px-1">Weather & Visibility</h2>
-                <div class="flex space-x-3 overflow-x-auto pb-4 hide-scroll">
-                    ${[{d:'4/8',i:'fa-sun',v:'高'},{d:'4/9',i:'fa-cloud',v:'中'},{d:'4/10',i:'fa-cloud-rain',v:'低'},{d:'4/11',i:'fa-sun',v:'極高'},{d:'4/12',i:'fa-sun',v:'高'},{d:'4/13',i:'fa-cloud-sun',v:'中'}].map(w=>`
-                        <div class="bg-white p-5 rounded-[2rem] min-w-[100px] text-center border border-gray-50 shadow-sm">
-                            <p class="text-[10px] text-gray-400 font-black uppercase mb-2">${w.d}</p>
-                            <i class="fa-solid ${w.i} text-blue-500 text-2xl my-3"></i>
-                            <div class="text-[8px] text-blue-600 bg-blue-50 py-1 px-2 rounded-full font-bold uppercase mt-1">Vis: ${w.v}</div>
-                        </div>`).join('')}
-                </div>`;
+            renderDayBar(); toggleFlight('go'); renderTrips(); renderWishes();
+            document.getElementById('weatherArea').innerHTML = `<h2 class="text-gray-700 font-bold mb-4 text-sm px-1">東京天氣預報</h2><div class="flex space-x-3 overflow-x-auto pb-4 hide-scroll">${[{d:'4/8',i:'fa-sun'},{d:'4/9',i:'fa-cloud'},{d:'4/10',i:'fa-cloud-rain'},{d:'4/11',i:'fa-sun'},{d:'4/12',i:'fa-sun'},{d:'4/13',i:'fa-cloud-sun'}].map(w=>`<div class="bg-white p-5 rounded-[2rem] min-w-[100px] text-center border border-gray-50 shadow-sm"><p class="text-[10px] text-gray-400 font-black uppercase mb-2">${w.d}</p><i class="fa-solid ${w.i} text-blue-500 text-2xl my-3"></i></div>`).join('')}</div>`;
         };
     </script>
 </body>
