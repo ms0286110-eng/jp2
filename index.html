@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>東京JP助手 V3.8 - 匯率自定義版</title>
+    <title>東京JP助手 V3.9 - 功能全修復版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -39,46 +39,68 @@
             <div id="flightCard" class="p-5"></div>
         </div>
         <div class="flex space-x-2 overflow-x-auto py-2 hide-scroll" id="dayBar"></div>
+        
+        <div class="flex justify-between items-center mb-2 px-1">
+            <h2 id="currentDayTitle" class="text-gray-700 font-bold text-sm">DAY 1 行程</h2>
+            <button onclick="openTripModal()" class="text-xs bg-blue-600 text-white px-4 py-2 rounded-full font-bold shadow-md shadow-blue-100">+ 新增</button>
+        </div>
+        
         <div id="tripList" class="space-y-0 pb-4"></div>
     </div>
 
     <div id="page-tools" class="page p-4 space-y-6">
         <section id="weatherArea"></section>
-        
         <section class="bg-blue-900 text-white p-6 rounded-[2rem] shadow-xl">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xs font-bold tracking-widest"><i class="fa-solid fa-calculator mr-2 text-yellow-400"></i> 自定義匯率轉換</h2>
+                <h2 class="text-xs font-bold tracking-widest"><i class="fa-solid fa-calculator mr-2 text-yellow-400"></i> 自定義匯率</h2>
                 <div class="bg-white/10 px-3 py-2 rounded-xl flex items-center gap-2 border border-white/10">
-                    <span class="text-[10px] text-blue-200">當前匯率:</span>
+                    <span class="text-[10px] text-blue-200">設定匯率:</span>
                     <input type="number" id="customRate" value="0.211" step="0.001" oninput="conv('j')" class="bg-transparent text-sm w-16 font-black outline-none text-yellow-300">
                 </div>
             </div>
             <div class="space-y-4">
-                <div class="relative">
-                    <label class="absolute -top-2 left-4 bg-blue-900 px-2 text-[9px] text-blue-300 uppercase">JPY 日幣</label>
-                    <input type="number" id="jpyV" oninput="conv('j')" class="w-full bg-white/5 border border-white/10 p-5 rounded-2xl text-2xl font-bold outline-none focus:border-blue-400 transition-all" placeholder="0">
-                </div>
-                <div class="flex justify-center"><i class="fa-solid fa-repeat text-blue-400"></i></div>
-                <div class="relative">
-                    <label class="absolute -top-2 left-4 bg-blue-900 px-2 text-[9px] text-blue-300 uppercase">TWD 台幣</label>
-                    <input type="number" id="twdV" oninput="conv('t')" class="w-full bg-white/5 border border-white/10 p-5 rounded-2xl text-2xl font-bold outline-none focus:border-blue-400 transition-all" placeholder="0">
-                </div>
+                <input type="number" id="jpyV" oninput="conv('j')" class="w-full bg-white/5 border border-white/10 p-5 rounded-2xl text-2xl font-bold outline-none" placeholder="日幣 JPY">
+                <input type="number" id="twdV" oninput="conv('t')" class="w-full bg-white/5 border border-white/10 p-5 rounded-2xl text-2xl font-bold outline-none" placeholder="台幣 TWD">
             </div>
-            <p class="text-[9px] text-blue-400 mt-4 text-center italic">※ 請先在右上角輸入您購買的即時匯率</p>
         </section>
     </div>
 
     <div id="page-prep" class="page p-4">
-        <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-50">
+        <div class="bg-white p-6 rounded-[2.5rem] shadow-sm">
             <div class="flex bg-gray-50 rounded-2xl p-1 mb-5">
-                <button onclick="toggleWish('place')" id="wishPlaceBtn" class="flex-1 py-3 text-[11px] font-bold rounded-xl bg-white shadow-sm text-blue-600 transition-all">想去的地點</button>
-                <button onclick="toggleWish('buy')" id="wishBuyBtn" class="flex-1 py-3 text-[11px] font-bold text-gray-400 transition-all">想買的清單</button>
+                <button onclick="toggleWish('place')" id="wishPlaceBtn" class="flex-1 py-3 text-[11px] font-bold rounded-xl bg-white shadow-sm text-blue-600 transition-all">想去</button>
+                <button onclick="toggleWish('buy')" id="wishBuyBtn" class="flex-1 py-3 text-[11px] font-bold text-gray-400 transition-all">想買</button>
             </div>
             <div class="flex gap-2 mb-6">
-                <input type="text" id="wishIn" class="flex-1 bg-gray-50 p-4 rounded-2xl text-xs outline-none border-none focus:ring-2 focus:ring-blue-100" placeholder="點擊新增項目...">
+                <input type="text" id="wishIn" class="flex-1 bg-gray-50 p-4 rounded-2xl text-xs outline-none" placeholder="新增清單...">
                 <button onclick="addWish()" class="bg-blue-600 text-white px-6 rounded-2xl text-xs font-bold">新增</button>
             </div>
             <ul id="wishList" class="space-y-3"></ul>
+        </div>
+    </div>
+
+    <div id="tripModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center p-6 z-[100] backdrop-blur-sm">
+        <div class="bg-white rounded-[2.5rem] w-full p-8 space-y-4 shadow-2xl max-w-sm">
+            <h3 id="modalTitle" class="font-black text-gray-800">編輯行程</h3>
+            <input type="hidden" id="editIndex">
+            <input type="text" id="mName" placeholder="地點/店名" class="w-full bg-gray-50 p-4 rounded-2xl outline-none text-sm font-bold border-0">
+            <div class="flex items-center gap-3">
+                <div class="flex-1 text-center">
+                    <label class="text-[9px] text-gray-400 mb-1 block">時 (0-23)</label>
+                    <input type="number" id="mH" inputmode="numeric" class="w-full bg-gray-50 p-4 rounded-2xl text-center font-bold border-0" placeholder="12">
+                </div>
+                <span class="pt-4 font-bold text-gray-300">:</span>
+                <div class="flex-1 text-center">
+                    <label class="text-[9px] text-gray-400 mb-1 block">分 (0-59)</label>
+                    <input type="number" id="mM" inputmode="numeric" class="w-full bg-gray-50 p-4 rounded-2xl text-center font-bold border-0" placeholder="00">
+                </div>
+            </div>
+            <input type="text" id="mMap" placeholder="Google 地圖網址 (優先導航)" class="w-full bg-gray-50 p-4 rounded-2xl outline-none text-[10px] border-0">
+            <input type="text" id="mNote" placeholder="備註內容" class="w-full bg-gray-50 p-4 rounded-2xl outline-none text-sm border-0">
+            <div class="flex gap-3 pt-2">
+                <button onclick="closeTripModal()" class="flex-1 font-bold text-gray-400 py-4">取消</button>
+                <button onclick="saveTrip()" class="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg">儲存</button>
+            </div>
         </div>
     </div>
 
@@ -121,7 +143,53 @@
             currentDay = d;
             document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('day-btn-'+d).classList.add('active');
+            document.getElementById('currentDayTitle').innerText = `DAY ${d} 行程`;
             renderTrips();
+        }
+
+        // 行程 Modal 控制
+        function openTripModal(index = null) {
+            const editIdx = document.getElementById('editIndex');
+            if (index !== null) {
+                const trips = JSON.parse(localStorage.getItem('tokyo_v35_trips') || '{}')[currentDay];
+                const t = trips[index];
+                document.getElementById('mName').value = t.name;
+                document.getElementById('mH').value = t.time.split(':')[0];
+                document.getElementById('mM').value = t.time.split(':')[1];
+                document.getElementById('mMap').value = t.map || '';
+                document.getElementById('mNote').value = t.note || '';
+                editIdx.value = index;
+                document.getElementById('modalTitle').innerText = "修改行程";
+            } else {
+                document.getElementById('mName').value = ''; document.getElementById('mH').value = ''; 
+                document.getElementById('mM').value = ''; document.getElementById('mMap').value = ''; 
+                document.getElementById('mNote').value = ''; editIdx.value = "";
+                document.getElementById('modalTitle').innerText = "新增行程";
+            }
+            document.getElementById('tripModal').style.display = 'flex';
+        }
+
+        function closeTripModal() { document.getElementById('tripModal').style.display = 'none'; }
+
+        function saveTrip() {
+            const name = document.getElementById('mName').value;
+            const h = document.getElementById('mH').value.toString().padStart(2, '0');
+            const m = document.getElementById('mM').value.toString().padStart(2, '0');
+            const mapLink = document.getElementById('mMap').value.trim();
+            const note = document.getElementById('mNote').value;
+            const editIdx = document.getElementById('editIndex').value;
+            if(!name) return alert('請輸入地點名稱');
+            
+            let tripsAll = JSON.parse(localStorage.getItem('tokyo_v35_trips') || '{}');
+            if(!tripsAll[currentDay]) tripsAll[currentDay] = [];
+            
+            const data = {name, time: `${h}:${m}`, map: mapLink, note};
+            if (editIdx !== "") tripsAll[currentDay][parseInt(editIdx)] = data;
+            else tripsAll[currentDay].push(data);
+            
+            tripsAll[currentDay].sort((a,b) => a.time.localeCompare(b.time));
+            localStorage.setItem('tokyo_v35_trips', JSON.stringify(tripsAll));
+            renderTrips(); closeTripModal();
         }
 
         function renderTrips() {
@@ -131,19 +199,23 @@
             trips.forEach((t, i) => {
                 const mapHref = t.map || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t.name)}`;
                 html += `
-                    <div class="bg-white p-5 rounded-[1.8rem] shadow-sm border border-gray-50 flex items-center gap-5 mb-1">
+                    <div class="bg-white p-5 rounded-[1.8rem] shadow-sm border border-gray-50 flex items-center gap-5 mb-1" onclick="openTripModal(${i})">
                         <div class="text-blue-600 font-black text-[13px] min-w-[40px]">${t.time}</div>
                         <div class="flex-1 border-l pl-5 border-gray-100">
                             <h4 class="font-black text-sm text-gray-800 line-clamp-1">${t.name}</h4>
-                            <p class="text-[10px] text-blue-400 mt-1 line-clamp-1">${t.note || '備註...'}</p>
+                            <p class="text-[10px] text-blue-400 mt-1 line-clamp-1">${t.note || '無備註'}</p>
                         </div>
-                        <a href="${mapHref}" target="_blank" class="w-10 h-10 rounded-full ${t.map ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-500'} flex items-center justify-center text-sm shadow-sm"><i class="fa-solid fa-location-arrow"></i></a>
+                        <div class="flex gap-2 items-center">
+                            <a href="${mapHref}" target="_blank" onclick="event.stopPropagation();" class="w-10 h-10 rounded-full ${t.map ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-500'} flex items-center justify-center text-sm shadow-sm"><i class="fa-solid fa-location-arrow"></i></a>
+                            <button onclick="event.stopPropagation(); delTrip(${i})" class="w-8 h-8 text-red-100"><i class="fa-solid fa-trash-can text-[10px]"></i></button>
+                        </div>
                     </div>`;
             });
             list.innerHTML = html || `<div class="text-center py-20 text-gray-300 text-[10px] font-bold uppercase">No Plans</div>`;
         }
 
-        // 匯率自定義邏輯
+        function delTrip(i) { if(confirm('確定刪除？')) { let tripsAll = JSON.parse(localStorage.getItem('tokyo_v35_trips')); tripsAll[currentDay].splice(i, 1); localStorage.setItem('tokyo_v35_trips', JSON.stringify(tripsAll)); renderTrips(); } }
+
         function conv(type) {
             const rate = parseFloat(document.getElementById('customRate').value) || 0.211;
             const jpy = document.getElementById('jpyV'), twd = document.getElementById('twdV');
@@ -151,7 +223,6 @@
             else jpy.value = (twd.value / rate).toFixed(0);
         }
 
-        // 願望邏輯
         function toggleWish(type) {
             currentWishType = type;
             document.getElementById('wishPlaceBtn').className = `flex-1 py-3 text-[11px] font-bold rounded-xl ${type==='place'?'bg-white shadow-sm text-blue-600':'text-gray-400'}`;
@@ -161,7 +232,6 @@
         function addWish() {
             const val = document.getElementById('wishIn').value; if(!val) return;
             let data = JSON.parse(localStorage.getItem('tokyo_v35_wish') || '{"place":[], "buy":[]}');
-            if(!data[currentWishType]) data[currentWishType] = [];
             data[currentWishType].push({t: val, d: false});
             localStorage.setItem('tokyo_v35_wish', JSON.stringify(data));
             document.getElementById('wishIn').value = ""; renderWishes();
@@ -187,7 +257,7 @@
         }
 
         function exportData() { const d = { trips: localStorage.getItem('tokyo_v35_trips'), wishes: localStorage.getItem('tokyo_v35_wish') }; prompt("備份代碼：", btoa(unescape(encodeURIComponent(JSON.stringify(d))))); }
-        function importData() { const c = prompt("貼上備份代碼："); if(!c) return; const d = JSON.parse(decodeURIComponent(escape(atob(c)))); localStorage.setItem('tokyo_v35_trips', d.trips); localStorage.setItem('tokyo_v35_wish', d.wishes); location.reload(); }
+        function importData() { const c = prompt("貼上代碼："); if(!c) return; const d = JSON.parse(decodeURIComponent(escape(atob(c)))); localStorage.setItem('tokyo_v35_trips', d.trips); localStorage.setItem('tokyo_v35_wish', d.wishes); location.reload(); }
 
         window.onload = () => {
             renderDayBar(); toggleFlight('go'); renderTrips(); toggleWish('place');
